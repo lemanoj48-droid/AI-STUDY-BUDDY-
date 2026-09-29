@@ -1,0 +1,176 @@
+AI_STUDY_BUDDY/
+│
+├── app.py
+├── database.py
+├── requirements.txt
+│
+├── services/
+│   ├── __init__.py
+│   └── study_ai.py
+│
+└── study_buddy.db
+BACKEND DEVELOPMENT – TEXT
+Backend Development
+The backend of the AI Study Buddy project is developed using Python Flask. It manages communication between the frontend and the database. The backend provides features such as student note management, study material summarization, quiz generation, and study-related chat assistance.
+SQLite is used to store student notes and related information. REST API endpoints process user requests and return responses in JSON format. The system is designed using a modular structure, making it easier to maintain and integrate advanced Artificial Intelligence features in the future.
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+from database import init_db, get_db
+from services.study_ai import (
+    summarize_text,
+    generate_quiz,
+    study_chat
+)
+
+app = Flask(__name__)
+CORS(app)
+
+init_db()
+
+
+@app.route("/")
+def home():
+    return jsonify({
+        "message": "Welcome to AI Study Buddy"
+    })
+
+
+@app.route("/api/health")
+def health():
+    return jsonify({
+        "status": "success",
+        "message": "Backend is running"
+    })
+
+
+@app.route("/api/notes", methods=["GET"])
+def get_notes():
+    db = get_db()
+
+    notes = db.execute(
+        "SELECT * FROM notes ORDER BY id DESC"
+    ).fetchall()
+
+    db.close()
+
+    return jsonify([dict(note) for note in notes])
+
+
+@app.route("/api/notes", methods=["POST"])
+def add_note():
+    data = request.get_json(silent=True) or {}
+
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+
+    if not title or not content:
+        return jsonify({
+            "error": "Title and content are required"
+        }), 400
+
+    db = get_db()
+
+    db.execute(
+        "INSERT INTO notes (title, content) VALUES (?, ?)",
+        (title, content)
+    )
+
+    db.commit()
+    db.close()
+
+    return jsonify({
+        "message": "Note saved successfully"
+    }), 201
+
+
+@app.route("/api/summarize", methods=["POST"])
+def summarize():
+    data = request.get_json(silent=True) or {}
+
+    text = data.get("text", "").strip()
+
+    if not text:
+        return jsonify({
+            "error": "Study text is required"
+        }), 400
+
+    summary = summarize_text(text)
+
+    return jsonify({
+        "summary": summary
+    })
+
+
+@app.route("/api/quiz", methods=["POST"])
+def quiz():
+    data = request.get_json(silent=True) or {}
+
+    text = data.get("text", "").strip()
+
+    if not text:
+        return jsonify({
+            "error": "Study text is required"
+        }), 400
+
+    questions = generate_quiz(text)
+
+    return jsonify({
+        "questions": questions
+    })
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    data = request.get_json(silent=True) or {}
+
+    message = data.get("message", "").strip()
+
+    if not message:
+        return jsonify({
+            "error": "Message is required"
+        }), 400
+
+    reply = study_chat(message)
+
+    return jsonify({
+        "reply": reply
+    })
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
+import sqlite3
+from pathlib import Path
+
+DB_PATH = Path(__file__).with_name(
+    "study_buddy.db"
+)
+
+
+def get_db():
+    db = sqlite3.connect(DB_PATH)
+
+    db.row_factory = sqlite3.Row
+
+    return db
+
+
+def init_db():
+    db = get_db()
+
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    db.commit()
+    db.close()
+Flask
+Flask-Cors
