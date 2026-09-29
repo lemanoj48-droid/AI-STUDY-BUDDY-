@@ -1,0 +1,37 @@
+const mongoose = require("mongoose");
+
+const connectDB = async () => {
+    try {
+        await mongoose.connect(
+            "mongodb://127.0.0.1:27017/ai_study_buddy"
+        );
+
+        console.log("Database Connected Successfully");
+    } catch (error) {
+        console.log("Database Connection Failed:", error.message);
+        process.exit(1);
+    }
+};
+
+module.exports = connectDB;
+const express = require("express");
+const connectDB = require("./database");
+
+const app = express();
+
+app.use(express.json());
+
+// Connect Database
+connectDB();
+
+// Home Page
+app.get("/", (req, res) => {
+    res.send("Welcome to AI Study Buddy");
+});
+
+// Start Server
+app.listen(5000, () => {
+    console.log("Server running on port 5000");
+});
+Database Connected Successfully
+Server running on port 5000
