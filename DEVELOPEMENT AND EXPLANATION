@@ -1,0 +1,65 @@
+Development – Text
+The AI Study Buddy is a smart learning assistance system designed to help students study effectively. It provides features such as study material summarization, quiz generation, note management, and study-related chat assistance. The frontend is developed using HTML, CSS, and JavaScript, while the backend uses Python Flask. SQLite is used to store student notes. The system helps students simplify learning materials, improve revision, and prepare for examinations.
+from flask import Flask, request, jsonify
+import sqlite3
+import re
+
+app = Flask(__name__)
+
+def connect_db():
+    db = sqlite3.connect("study_buddy.db")
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            content TEXT
+        )
+    """)
+    return db
+
+@app.route("/")
+def home():
+    return "Welcome to AI Study Buddy"
+
+@app.route("/api/notes", methods=["POST"])
+def add_note():
+    data = request.get_json(silent=True) or {}
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+
+    if not title or not content:
+        return jsonify({"error": "Enter title and content"}), 400
+
+    db = connect_db()
+    db.execute(
+        "INSERT INTO notes (title, content) VALUES (?, ?)",
+        (title, content)
+    )
+    db.commit()
+    db.close()
+
+    return jsonify({"message": "Note saved successfully"})
+
+@app.route("/api/summarize", methods=["POST"])
+def summarize():
+    data = request.get_json(silent=True) or {}
+    text = data.get("text", "").strip()
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    return jsonify({"summary": " ".join(sentences[:3])})
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    data = request.get_json(silent=True) or {}
+    message = data.get("message", "").lower()
+
+    if "quiz" in message:
+        reply = "Revise your lesson and practise sample questions."
+    elif "study" in message:
+        reply = "Create a timetable and study one topic at a time."
+    else:
+        reply = "Welcome to AI Study Buddy! How can I help you?"
+
+    return jsonify({"reply": reply})
+
+if __name__ == "__main__":
+    app.run(debug=True)
